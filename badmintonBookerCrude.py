@@ -5,7 +5,7 @@ from config import USERNAME, PASSWORD
 
 
 def login(page):
-    print("logging in...")
+    print("... logging in...")
     page.goto("https://recreation.utoronto.ca/home")
     page.click('#loginLinkBtn')  # clicks "Sign In"
     page.click(
@@ -25,9 +25,9 @@ def login(page):
 
 
 def navigate_to_booking_page(page):
-    print("navigating to the booking page...")
+    print("... navigating to the booking page...")
     page.goto("https://recreation.utoronto.ca/booking")
-    print("clicking the S&R Badminton link...")
+    print("... clicking the S&R Badminton link...")
     page.click(
         "//div[@id='divBookingProducts-large']//a[contains(@class, 'inherit-link')]//*[contains(text(), 'S&R Badminton')]/..")
 
@@ -43,11 +43,14 @@ def wait_until_time(desired_hour, desired_minute, desired_second):
     while True:
         now = datetime.now().time()
         if desired_time <= now < max_time.time():
-            print("The desired time has been reached: " + desired_time.strftime("%H:%M:%S"))
+            print("The desired time has been reached: " + desired_time.strftime(
+                "%H:%M:%S"))
             return True
         # loop every 100 ms
         time_module.sleep(0.1)
-        print("... waiting until time is: " + desired_time_string + "... current time is " + now.strftime("%H:%M:%S"))
+        print(
+            "... waiting until time is: " + desired_time_string + "... current time is " + now.strftime(
+                "%H:%M:%S"))
 
 
 def check_time_and_refresh(page, desired_hour, desired_minute, desired_second):
@@ -64,17 +67,48 @@ def click_date(page, desired_date):
 
 def select_court_and_time(page, timeString):
     selector_base = f"//*[contains(text(),'{timeString}')]"
-    courts = ["Court 01-AC-Badminton", "Court 02-AC-Badminton",
-              "Court 03-AC-Badminton"]
+    courts = ["Court 03-AC-Badminton", "Court 02-AC-Badminton",
+              "Court 01-AC-Badminton"]
     for court in courts:
+        print(f"on court page {court}")
         parent_element = page.locator("#tabBookingFacilities")
         parent_element.locator(f"//*[contains(text(),'{court}')]").click()
         time_element = page.locator(selector_base).locator("../..").locator(
             "button")
+        print(f"Time element text: {time_element.text_content()}")
+        if "Book Now" not in time_element.text_content():
+            print("'Book now' not the current text in button")
+            continue
         time_element.click()
         button_text = time_element.text_content()
         # TODO:
         print(f"The text of the button is: {button_text}")
+
+
+def refresh_every_minute_until_two_minutes_away(page, hour, minute, second):
+    """
+    If the given time (hour, minute, second) is more than 2 minutes away from the current time,
+    refresh every minute.
+
+    :param page: page object
+    :param hour: Desired hour (0-23)
+    :param minute: Desired minute (0-59)
+    :param second: Desired second (0-59)
+    """
+    desired_time = datetime.combine(datetime.today(), datetime.min.time()).replace(hour=hour, minute=minute, second=second)
+    while True:
+        now = datetime.now()
+        time_difference = desired_time - now
+
+        if time_difference.total_seconds() <= 120:
+            print("The time is within 2 minutes. Stopping refresh.")
+            break
+
+        print("refreshed!")
+        print(f"Current time: {now.strftime('%H:%M:%S')}. Refreshing in 1 minute...")
+        print("refreshing...")
+        page.reload()
+        time_module.sleep(60)  # Wait for 1 minute
 
 
 def run(playwright: Playwright):
@@ -82,19 +116,24 @@ def run(playwright: Playwright):
     # booking date
     today = datetime.today()
     print(f"Thanks for using Badminton Booker. The day today is: {today}")
-    month = input("Enter the month of desired booking date (e.g., Jul): ")
-    day = input("Enter the day of desired booking date (e.g., 17): ")
-    year = input("Enter the year of desired booking date (e.g., 2024): ")
+    month = input("Enter the MONTH of desired booking date (e.g., Jul): ")
+    day = input("Enter the DAY of desired booking date (e.g., 17): ")
+    year = input("Enter the YEAR of desired booking date (e.g., 2024): ")
 
     # time and date as it appears on the UofT Booking page
     desired_date = f"{month} {day}, {year}"
-    desired_time = input("Enter the time as it appears (e.g., '7 - 7:55 AM', '6 - 6:55 PM'): ")
+    desired_time = input(
+        "Enter the time as it appears (e.g., '7 - 7:55 AM', '6 - 6:55 PM'): ")
 
     # time to perform the page reload
-    refresh_hour = int(input("Enter the hour you want to refresh the page (1-12): "))
-    refresh_minute = int(input("Enter the minute you want to refresh the page (0-59): "))
-    refresh_second = int(input("Enter the second you want to refresh the page (0-59): "))
-    am_or_pm = input("Is the time you want to refresh the page AM or PM? ").lower()
+    refresh_hour = int(
+        input("Enter the HOUR you want to refresh the page and hit book (1-12): "))
+    refresh_minute = int(
+        input("Enter the MINUTE you want to refresh the page and hit book (0-59): "))
+    refresh_second = int(
+        input("Enter the SECOND you want to refresh the page and hit book (0-59): "))
+    am_or_pm = input(
+        "Is the time you want to refresh the page and hit book AM or PM? ").lower()
     # Adjust refresh_hour for AM or PM (convert to 24h)
     if am_or_pm.lower() == "pm" and refresh_hour != 12:
         refresh_hour += 12
@@ -104,7 +143,7 @@ def run(playwright: Playwright):
     print("firing up chromedriver!")
     chromium = playwright.chromium  # or "firefox" or "webkit".
     browser = chromium.launch(
-        headless=False)  # if headless is false, there will be a popup window
+        headless=True)  # TODO : make headless true for the real thing!
     page = browser.new_page()
     print("... logging in...")
     login(page)
@@ -112,8 +151,12 @@ def run(playwright: Playwright):
     print("... logged in...")
     navigate_to_booking_page(page)
 
+    # if the time is more than 5 minutes away, reload every minute
+    refresh_every_minute_until_two_minutes_away(page, refresh_hour, refresh_minute, refresh_second)
+
     print("... navigated to booking page...")
-    print(f"Refreshing at {refresh_hour}:{refresh_minute}:{refresh_second}")
+    print(
+        f"INFO: refreshing at {refresh_hour}:{refresh_minute}:{refresh_second}")
     check_time_and_refresh(page, refresh_hour, refresh_minute, refresh_second)
 
     print(f"... refreshed... clicking date {desired_date} now...")
@@ -122,7 +165,8 @@ def run(playwright: Playwright):
     print("clicked date... booking court at the desired hour now...")
     select_court_and_time(page, desired_time)
 
-    print("booking completed. Closing...")
+    print(
+        "Attempt at booking completed. Please view logs above to see if booking was successful. Closing...")
     browser.close()
 
 
