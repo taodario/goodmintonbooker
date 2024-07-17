@@ -1,5 +1,5 @@
 from datetime import datetime, time, timedelta
-import time
+import time as time_module
 from playwright.sync_api import sync_playwright, Playwright
 from config import USERNAME, PASSWORD
 
@@ -10,16 +10,18 @@ def login(page):
     page.click('#loginLinkBtn')  # clicks "Sign In"
     page.click(
         '#section-sign-in-first > div:nth-child(6) > div > button')  # clicks "Log in with UTOR ID"
-    time.sleep(1)
+    time_module.sleep(1)
     page.fill('#username', USERNAME)
     page.fill('#password', PASSWORD)
-    time.sleep(2)
+    time_module.sleep(2)
     page.click('#login-btn')
-    time.sleep(5)
+    time_module.sleep(5)
+    print("ACTION: Please check phone and approve DUO Verification!")
     page.wait_for_selector('#trust-browser-button')
-    time.sleep(3)
+    print("DUO Verification has been approved!")
+    time_module.sleep(3)
     page.click('#trust-browser-button')
-    time.sleep(5)
+    time_module.sleep(5)
 
 
 def navigate_to_booking_page(page):
@@ -30,8 +32,11 @@ def navigate_to_booking_page(page):
         "//div[@id='divBookingProducts-large']//a[contains(@class, 'inherit-link')]//*[contains(text(), 'S&R Badminton')]/..")
 
 
-def wait_until_time(desired_hour, desired_minute, desired_seconds):
-    desired_time = time(desired_hour, desired_minute, desired_seconds)
+# recommended that desired_seconds is the 59th second. (1 second till the next min)
+def wait_until_time(desired_hour, desired_minute, desired_second):
+    desired_time = time(desired_hour, desired_minute, desired_second)
+    desired_time_string = desired_time.strftime("%H:%M:%S")
+
     desired_datetime = datetime.combine(datetime.today(), desired_time)
     max_time = desired_datetime + timedelta(seconds=1)
 
@@ -41,40 +46,14 @@ def wait_until_time(desired_hour, desired_minute, desired_seconds):
             print("The desired time has been reached: " + desired_time.strftime("%H:%M:%S"))
             return True
         # loop every 100 ms
-        time.sleep(0.1)
+        time_module.sleep(0.1)
+        print("... waiting until time is: " + desired_time_string + "... current time is " + now.strftime("%H:%M:%S"))
 
 
-def check_time_and_refresh(page, desired_time):
-
-    # Assume desired_hour is already the correct 24-hour format
-    target_time = dtime(hour=desired_hour, minute=0, second=0)
-
-    while True:
-        now = datetime.now()
-        time_to_target = datetime.combine(now.date(), target_time) - now
-
-        # If more than 3 minutes to target, reload every minute
-        if time_to_target > timedelta(minutes=3):
-            time.sleep(
-                30)  # Wait until the start of the next minute
-            print("refreshing the page...")
-            page.reload()
-        else:
-            # When less than 3 minutes to target, break out of the loop
-            break
-
-    # Final reload just before the hour
-    while True:
-        now = datetime.now()
-        previous_hour = (desired_hour - 1) % 24
-
-        if dtime(previous_hour, 59, 59) <= now.time() < dtime(desired_hour,
-                                                              0, 1):
-            print("performing the last refresh...")
-            page.reload()
-            break
-        print("the current time is: " + now.strftime('%Y-%m-%d %H:%M:%S'))
-        time.sleep(0.1)  # Check every 100 milliseconds
+def check_time_and_refresh(page, desired_hour, desired_minute, desired_second):
+    wait_until_time(desired_hour, desired_minute, desired_second)
+    print("refreshing the page now...")
+    page.reload()
 
 
 def click_date(page, desired_date):
@@ -83,8 +62,8 @@ def click_date(page, desired_date):
     page.click(date_selector)
 
 
-def select_court_and_time(page, hour):
-    selector_base = "//*[contains(text(),'" + hour + " - " + hour + ":55 PM" + "')]"
+def select_court_and_time(page, timeString):
+    selector_base = f"//*[contains(text(),'{timeString}')]"
     courts = ["Court 01-AC-Badminton", "Court 02-AC-Badminton",
               "Court 03-AC-Badminton"]
     for court in courts:
@@ -94,26 +73,56 @@ def select_court_and_time(page, hour):
             "button")
         time_element.click()
         button_text = time_element.text_content()
+        # TODO:
         print(f"The text of the button is: {button_text}")
 
 
 def run(playwright: Playwright):
 
-    DESIRED_DATE = "Jul 17, 2024"
-    # should set it to be able to be AM and PM because of weekends
-    DESIRED_HOUR = "8"  # the full string for xpath would be: 7 - 7:55 PM
+    # booking date
+    today = datetime.today()
+    print(f"Thanks for using Badminton Booker. The day today is: {today}")
+    month = input("Enter the month of desired booking date (e.g., Jul): ")
+    day = input("Enter the day of desired booking date (e.g., 17): ")
+    year = input("Enter the year of desired booking date (e.g., 2024): ")
 
+    # time and date as it appears on the UofT Booking page
+    desired_date = f"{month} {day}, {year}"
+    desired_time = input("Enter the time as it appears (e.g., '7 - 7:55 AM', '6 - 6:55 PM'): ")
+
+    # time to perform the page reload
+    refresh_hour = int(input("Enter the hour you want to refresh the page (1-12): "))
+    refresh_minute = int(input("Enter the minute you want to refresh the page (0-59): "))
+    refresh_second = int(input("Enter the second you want to refresh the page (0-59): "))
+    am_or_pm = input("Is the time you want to refresh the page AM or PM? ").lower()
+    # Adjust refresh_hour for AM or PM (convert to 24h)
+    if am_or_pm.lower() == "pm" and refresh_hour != 12:
+        refresh_hour += 12
+    elif am_or_pm.lower() == "am" and refresh_hour == 12:
+        refresh_hour = 0
+
+    print("firing up chromedriver!")
     chromium = playwright.chromium  # or "firefox" or "webkit".
     browser = chromium.launch(
         headless=False)  # if headless is false, there will be a popup window
     page = browser.new_page()
-
+    print("... logging in...")
     login(page)
-    navigate_to_booking_page(page)
-    check_time_and_refresh(page, int(DESIRED_HOUR))
-    click_date(page, DESIRED_DATE)
-    select_court_and_time(page, DESIRED_HOUR)
 
+    print("... logged in...")
+    navigate_to_booking_page(page)
+
+    print("... navigated to booking page...")
+    print(f"Refreshing at {refresh_hour}:{refresh_minute}:{refresh_second}")
+    check_time_and_refresh(page, refresh_hour, refresh_minute, refresh_second)
+
+    print(f"... refreshed... clicking date {desired_date} now...")
+    click_date(page, desired_date)
+
+    print("clicked date... booking court at the desired hour now...")
+    select_court_and_time(page, desired_time)
+
+    print("booking completed. Closing...")
     browser.close()
 
 
