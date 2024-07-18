@@ -83,6 +83,29 @@ def select_court_and_time(page, timeString):
         button_text = time_element.text_content()
         # TODO:
         print(f"The text of the button is: {button_text}")
+        if "Booking" in button_text:
+            while "Booking" in time_element.text_content(): # might run out of memory here
+                # if check_element_exists(".recaptcha-checkbox-border"):
+                #     page.locator(".recaptcha-checkbox-border").click()
+                curr_text_content = time_element.text_content()
+                print(f"The current text of the button is: {curr_text_content}")
+                if "Booked" in curr_text_content:
+                    return
+                print("Sleeping for 100 ms...")
+                time_module.sleep(0.1)  # wait 100ms
+                # should probably add a time out here so I can cycle to the other courts
+
+def check_element_exists(page, selector):
+    # Locate the element using the selector
+    element = page.locator(selector)
+
+    # Check if the element exists by counting the number of matched elements
+    if element.count() > 0:
+        print("Element exists")
+        return True
+    else:
+        print("Element does not exist")
+        return False
 
 
 def refresh_every_minute_until_two_minutes_away(page, hour, minute, second):
@@ -141,9 +164,9 @@ def run(playwright: Playwright):
         refresh_hour = 0
 
     print("firing up chromedriver!")
-    chromium = playwright.chromium  # or "firefox" or "webkit".
+    chromium = playwright.firefox  # or "firefox" or "webkit".
     browser = chromium.launch(
-        headless=True)  # TODO : make headless true for the real thing!
+        headless=False)  # TODO : make headless true for the real thing!
     page = browser.new_page()
     print("... logging in...")
     login(page)
