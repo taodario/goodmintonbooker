@@ -84,6 +84,7 @@ def select_court_and_time(page, timeString):
         # TODO:
         print(f"The text of the button is: {button_text}")
         if "Booking" in button_text:
+            # TODO: if there is a Captcha, then close the captcha and go to other page
             while "Booking" in time_element.text_content(): # might run out of memory here
                 # if check_element_exists(".recaptcha-checkbox-border"):
                 #     page.locator(".recaptcha-checkbox-border").click()
