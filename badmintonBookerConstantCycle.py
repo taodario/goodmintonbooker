@@ -57,6 +57,16 @@ def click_court(page, court):
     print(f"clicked on court: {court}")
 
 
+def take_screenshot(page):
+    print("take_screenshot() is taking a screenshot...")
+    timestamp = int(
+        time_module.time() * 1000)  # current time in milliseconds
+    filename = f"./screenshots/screenshot_{timestamp}.png"
+    page.wait_for_load_state('load')
+    page.screenshot(path=filename, timeout=60000)
+    print(f"Saved screenshot to {filename}")
+
+
 def click_time(page, timeString):
     selector_base = f"//*[contains(text(),'{timeString}')]"
     time_element = page.locator(selector_base).locator("../..").locator(
@@ -78,19 +88,21 @@ def click_time(page, timeString):
         print("Sleeping for 10s...")
         time_module.sleep(10)  # wait 100ms
         print(f"Taking a screenshot...")
-
-        timestamp = int(
-            time_module.time() * 1000)  # current time in milliseconds
-        filename = f"screenshot_{timestamp}.png"
-        page.screenshot(path=filename)
-        print(f"Saved screenshot to {filename}")
-
+        take_screenshot(page)
         # Sleep for a short time to ensure unique timestamps
         time_module.sleep(1)
 
     if check_element_exists(page, ".recaptcha-checkbox-border"):
         print("there is a recaptcha dialog!")
+        take_screenshot(page)
         # renavigate?
+
+
+def times_to_consider_according_to_date(date_string):
+    if date_string is "Jul 19, 2024":
+        return ["6 - 6:55 PM", "7 - 7:55 PM", "8 - 8:55 PM"]
+    if date_string is "Jul 20, 2024":
+        return ["10 - 10:55 AM", "11 - 11:55 AM", "12 - 12:55 PM", "1 - 1:55 PM", "2 - 2:55 PM", "3 - 3:55 PM", "4 - 4:55 PM"]
 
 
 def constant_loop_for_booking(page, dates_to_consider, times_to_consider):
@@ -132,21 +144,26 @@ def run(playwright: Playwright):
     browser = chromium.launch(
         headless=False)
     page = browser.new_page()
-    print("... logging in...")
-    login(page)
 
-    print("... logged in...")
-    navigate_to_booking_page(page)
+    try:
+        print("... logging in...")
+        login(page)
 
-    print("... navigated to booking page...")
+        print("... logged in...")
+        navigate_to_booking_page(page)
 
-    dates_to_consider = ["Jul 18, 2024", "Jul 19, 2024"]
-    times_to_consider = ["6 - 6:55 PM", "7 - 7:55 PM", "8 - 8:55 PM"]
-    constant_loop_for_booking(page, dates_to_consider, times_to_consider)
+        print("... navigated to booking page...")
 
-    print(
-        "Attempt at booking completed. Please view logs above to see if booking was successful. Closing...")
-    browser.close()
+        dates_to_consider = ["Jul 19, 2024", "Jul 20, 2024"]
+        times_to_consider = ["6 - 6:55 PM", "7 - 7:55 PM", "8 - 8:55 PM"]
+        constant_loop_for_booking(page, dates_to_consider, times_to_consider)
+    except Exception as e:
+        print("Playwright has failed somewhere.")
+        take_screenshot(page)
+    finally:
+        print(
+            "Attempt at booking completed. Please view logs above to see if booking was successful. Closing...")
+        browser.close()
 
 
 with sync_playwright() as playwright:
