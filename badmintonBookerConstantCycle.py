@@ -58,12 +58,13 @@ def click_court(page, court):
 
 
 def take_screenshot(page):
+    time_module.sleep(10)
     print("take_screenshot() is taking a screenshot...")
     timestamp = int(
         time_module.time() * 1000)  # current time in milliseconds
     filename = f"./screenshots/screenshot_{timestamp}.png"
-    page.wait_for_load_state('load')
-    page.screenshot(path=filename, timeout=60000)
+    # page.wait_for_load_state('load')
+    page.screenshot(path=filename)
     print(f"Saved screenshot to {filename}")
 
 
@@ -84,9 +85,9 @@ def click_time(page, timeString):
     button_text = time_element.text_content()
     print(f"The text of the button is: {button_text}")
     if "Booking" in button_text:
-        print(f"The current time is: {datetime.now().strftime('%H:%M:%S')}")
-        print("Sleeping for 10s...")
-        time_module.sleep(10)  # wait 100ms
+        print(f"Text is booking now. The current time is: {datetime.now().strftime('%H:%M:%S')}")
+        print("Sleeping for 120s...")
+        time_module.sleep(120)  # wait 2 minutes
         print(f"Taking a screenshot...")
         take_screenshot(page)
         # Sleep for a short time to ensure unique timestamps
@@ -102,7 +103,10 @@ def times_to_consider_according_to_date(date_string):
     if date_string is "Jul 19, 2024":
         return ["6 - 6:55 PM", "7 - 7:55 PM", "8 - 8:55 PM"]
     if date_string is "Jul 20, 2024":
-        return ["10 - 10:55 AM", "11 - 11:55 AM", "12 - 12:55 PM", "1 - 1:55 PM", "2 - 2:55 PM", "3 - 3:55 PM", "4 - 4:55 PM"]
+        return ["10 - 10:55 AM", "11 - 11:55 AM", "12 - 12:55 PM",
+                "1 - 1:55 PM", "2 - 2:55 PM", "3 - 3:55 PM", "4 - 4:55 PM"]
+    print(
+        f"your specified date: {date_string} isn't found in times_to_consider_according_to_date()")
 
 
 def constant_loop_for_booking(page, dates_to_consider, times_to_consider):
@@ -121,7 +125,7 @@ def constant_loop_for_booking(page, dates_to_consider, times_to_consider):
                 print(f"on court page for {court}")
                 time_module.sleep(2)
 
-                for timeString in times_to_consider:
+                for timeString in times_to_consider_according_to_date(date):
                     print(f"looking at time {timeString}")
                     click_time(page, timeString)
 
@@ -142,22 +146,20 @@ def run(playwright: Playwright):
     print("firing up chromedriver!")
     chromium = playwright.chromium  # or "firefox" or "webkit".
     browser = chromium.launch(
-        headless=False)
+        headless=True)
     page = browser.new_page()
 
     try:
         print("... logging in...")
         login(page)
-
         print("... logged in...")
         navigate_to_booking_page(page)
-
         print("... navigated to booking page...")
-
         dates_to_consider = ["Jul 19, 2024", "Jul 20, 2024"]
         times_to_consider = ["6 - 6:55 PM", "7 - 7:55 PM", "8 - 8:55 PM"]
         constant_loop_for_booking(page, dates_to_consider, times_to_consider)
     except Exception as e:
+        print(f"Playwright has failed somwhere. The time is {datetime.now().strftime('%H:%M:%S')}")
         print("Playwright has failed somewhere.")
         take_screenshot(page)
     finally:
