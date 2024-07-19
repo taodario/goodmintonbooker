@@ -57,8 +57,20 @@ def click_court(page, court):
     print(f"clicked on court: {court}")
 
 
+def check_element_exists_by_locator(locator):
+    # Check if the element exists by counting the number of matching elements
+    count = locator.count()
+    return count > 0  # Return True if element exists, otherwise False
+
+
 def click_time(page, timeString):
     selector_base = f"//*[contains(text(),'{timeString}')]"
+
+    if not check_element_exists_by_locator(page.locator(selector_base).locator(
+            "../..").locator("button")):
+        print("button not yet enabled for time " + timeString)
+        return
+
     time_element = page.locator(selector_base).locator("../..").locator(
         "button")
     print(f"the time element text: {time_element.text_content()}")
@@ -74,23 +86,25 @@ def click_time(page, timeString):
     button_text = time_element.text_content()
     print(f"The text of the button is: {button_text}")
     if "Booking" in button_text:
-        print(f"The current time is: {datetime.now().strftime('%H:%M:%S')}")
         print("Sleeping for 10s...")
         time_module.sleep(10)  # wait 100ms
-        print(f"Taking a screenshot...")
 
-        timestamp = int(
-            time_module.time() * 1000)  # current time in milliseconds
-        filename = f"screenshot_{timestamp}.png"
-        page.screenshot(path=filename)
-        print(f"Saved screenshot to {filename}")
+        # Commenting out screenshot code because it's not tested.
+        # # take a screenshot
+        # # Construct a unique filename using the current timestamp
+        # timestamp = int(time_module.time() * 1000)  # Current time in milliseconds
+        # filename = f"screenshot_{timestamp}.png"
+        #
+        # # Take a screenshot and save it with the unique filename
+        # page.screenshot(path=filename)
+        # print(f"Saved screenshot to {filename}")
 
         # Sleep for a short time to ensure unique timestamps
         time_module.sleep(1)
 
     if check_element_exists(page, ".recaptcha-checkbox-border"):
-        print("there is a recaptcha dialog!")
-        # renavigate?
+        print("there is a recaptcha dialog! Re-navigating to booking page...")
+        navigate_to_booking_page(page)
 
 
 def constant_loop_for_booking(page, dates_to_consider, times_to_consider):
@@ -140,8 +154,10 @@ def run(playwright: Playwright):
 
     print("... navigated to booking page...")
 
-    dates_to_consider = ["Jul 18, 2024", "Jul 19, 2024"]
-    times_to_consider = ["6 - 6:55 PM", "7 - 7:55 PM", "8 - 8:55 PM"]
+    dates_to_consider = ["Jul 20, 2024"]
+    times_to_consider = ["10 - 10:55 AM", "11 - 11:55 AM", "12 - 12:55 PM",
+                         "1 - 1:55 PM", "2 - 2:55 PM", "3 - 3:55 PM",
+                         "4 - 4:55 PM"]
     constant_loop_for_booking(page, dates_to_consider, times_to_consider)
 
     print(
