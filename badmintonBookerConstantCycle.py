@@ -64,7 +64,7 @@ def take_screenshot(page):
         time_module.time() * 1000)  # current time in milliseconds
     filename = f"./screenshots/screenshot_{timestamp}.png"
     # page.wait_for_load_state('load')
-    page.screenshot(path=filename)
+    page.screenshot(path=filename, full_page=True)
     print(f"Saved screenshot to {filename}")
 
 
@@ -101,8 +101,8 @@ def click_time(page, timeString):
 
 def times_to_consider_according_to_date(date_string):
     if date_string is "Jul 19, 2024":
-        return ["6 - 6:55 PM", "7 - 7:55 PM", "8 - 8:55 PM"]
-    if date_string is "Jul 20, 2024":
+        return ["7 - 7:55 PM", "8 - 8:55 PM"]
+    if date_string is "Jul 20, 2024" or "Jul 21, 2024":
         return ["10 - 10:55 AM", "11 - 11:55 AM", "12 - 12:55 PM",
                 "1 - 1:55 PM", "2 - 2:55 PM", "3 - 3:55 PM", "4 - 4:55 PM"]
     print(
@@ -155,7 +155,7 @@ def run(playwright: Playwright):
         print("... logged in...")
         navigate_to_booking_page(page)
         print("... navigated to booking page...")
-        dates_to_consider = ["Jul 19, 2024", "Jul 20, 2024"]
+        dates_to_consider = ["Jul 20, 2024", "Jul 21, 2024"]
         times_to_consider = ["6 - 6:55 PM", "7 - 7:55 PM", "8 - 8:55 PM"]
         constant_loop_for_booking(page, dates_to_consider, times_to_consider)
     except Exception as e:
